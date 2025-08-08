@@ -1,0 +1,17 @@
+# Local Terraform state
+terraform.tfstate
+terraform.tfstate.backup
+
+# .tfvars files
+*.tfvars
+*.tfvars.json
+
+# Crash log files
+crash.log
+
+# Exclude all .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Exclude .terraform directory
+.terraform/
