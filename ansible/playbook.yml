@@ -1,0 +1,62 @@
+---
+- name: Deploy Spring PetClinic to remote host using Docker
+  hosts: app_server
+  become: yes
+  vars:
+    app_name: spring-petclinic
+    app_version: "3.4.0"
+    jar_file: "spring-petclinic-{{ app_version }}.jar"
+    container_name: spring-petclinic
+    image_name: spring-petclinic-image
+
+  tasks:
+    - name: Ensure apt cache is updated
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install required packages (Debian-based)
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Docker (Debian-based)
+      apt:
+        name: docker.io
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Start and enable Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Copy Spring PetClinic JAR to remote host
+      copy:
+        src: "files/{{ jar_file }}"
+        dest: "/opt/{{ jar_file }}"
+        mode: '0755'
+
+    - name: Create Dockerfile for Spring PetClinic
+      copy:
+        dest: /opt/Dockerfile
+        content: |
+          FROM eclipse-temurin:17-jdk
+          COPY {{ jar_file }} app.jar
+          ENTRYPOINT ["java","-jar","/app.jar"]
+
+    - name: Build Docker image
+      command: docker build -t {{ image_name }}:{{ app_version }} /opt
+
+    - name: Stop and remove existing container if running
+      command: docker rm -f {{ container_name }}
+      ignore_errors: yes
+
+    - name: Run Spring PetClinic container
+      command: docker run -d --name {{ container_name }} -p 8080:8080 {{ image_name }}:{{ app_version }}
